@@ -6,7 +6,7 @@
 #define TEMPS 5000.0
 
 double generer_inter_arrivee(void) {
-    double esperance = 3.3333;
+    double esperance = 3.33;
     double lambda = 1 / esperance;
     double z = 0;
     while (z == 0) 
@@ -164,42 +164,48 @@ void serverAB() {
     double t_cumB = 0; // temps total de sejour dans le systeme
     double t_occA = 0; // temps total d'occupation du serveur
     double t_occB = 0; // temps total d'occupation du serveur
+    int nouvellePiece = 0;
 
     while (tA < t_fin) {
-        if (t_arrA < t_depA) {
-            // Evenement d'arrivee A
-            deltaA = t_arrA - tA;
-            t_cumA = t_cumA + sA * deltaA;
-            t_occA = t_occA + bA * deltaA;
-            nbA++;
-            nb++;
-            tA = t_arrA;
-            sA++;
-            if (!bA) {
-                bA = 1;
-                t_depA = tA + generer_tmps_serviceA();
+        printf("%d\n", sB);
+        if (sB <= 5) { //Si la file de B est pleine, on bloque A
+            if (t_arrA < t_depA) {
+                // Evenement d'arrivee A
+                deltaA = t_arrA - tA;
+                t_cumA = t_cumA + sA * deltaA;
+                t_occA = t_occA + bA * deltaA;
+                nbA++;
+                nb++;
+                tA = t_arrA;
+                sA++;
+                if (!bA) {
+                    bA = 1;
+                    t_depA = tA + generer_tmps_serviceA();
+                }
+                t_arrA = tA + generer_inter_arrivee() ;
             }
-            t_arrA = tA + generer_inter_arrivee() ;
-        }
-        else {
-            // Evenement de depart A
-            deltaA = t_depA - tA;
-            t_cumA = t_cumA + sA * deltaA;
-            t_occA = t_occA + bA * deltaA;
-            tA = t_depA;
-            sA--;
-            if (sA > 0) {
-                t_depA = tA + generer_tmps_serviceA();                
-            } else {
-                bA = 0;
-                t_depA = __INT_MAX__;
+            else {
+                // Evenement de depart A
+                deltaA = t_depA - tA;
+                t_cumA = t_cumA + sA * deltaA;
+                t_occA = t_occA + bA * deltaA;
+                tA = t_depA;
+                sA--;
+                if (sA > 0) {
+                    t_depA = tA + generer_tmps_serviceA();                
+                } else {
+                    bA = 0;
+                    t_depA = __INT_MAX__;
+                }
+                t_arrB = tA;
+                nouvellePiece = 1;
+                
             }
-            t_arrB = tA;
-            
         }
 
-        if (t_arrB < t_depB) {
+        if ((t_arrB < t_depB) && (nouvellePiece)) {
             // Evenement d'arrivee B
+            nouvellePiece = 0;
             deltaB = t_arrB - tB;
             t_cumB = t_cumB + sB * deltaB;
             t_occB = t_occB + bB * deltaB;
@@ -211,9 +217,10 @@ void serverAB() {
                 bB = 1;
                 t_depB = tB + generer_tmps_serviceB();
             }
-            t_arrB = tB + generer_inter_arrivee() ;
+            
+            
         }
-        else {
+        else if (t_arrB >= t_depB) {
             // Evenement de depart B
             deltaB = t_depB - tB;
             t_cumB = t_cumB + sB * deltaB;
