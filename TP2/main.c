@@ -151,7 +151,7 @@ void serverAB() {
     double t_depA = generer_tmps_serviceA() + tA; // pas de depart programmé
     double t_depB = generer_tmps_serviceB() + tB; // pas de depart programmé
     double t_arrA = 0; // arrivée de la pièce suivante à zéro
-    double t_arrB = 0; // arrivée de la pièce suivante à zéro
+    double t_arrB = TEMPS; // arrivée de la pièce suivante à zéro
     double t_fin = TEMPS; // duree de la simulation
     int bA = 0; // etat du serveur, busy or not
     int bB = 0;
@@ -182,7 +182,7 @@ void serverAB() {
             t_arrA = tA + generer_inter_arrivee() ;
         }
         else {
-            // Evenement de depart
+            // Evenement de depart A
             deltaA = t_depA - tA;
             t_cumA = t_cumA + sA * deltaA;
             t_occA = t_occA + bA * deltaA;
@@ -194,6 +194,8 @@ void serverAB() {
                 bA = 0;
                 t_depA = __INT_MAX__;
             }
+            t_arrB = tA;
+            
         }
 
         if (t_arrB < t_depB) {
@@ -212,7 +214,7 @@ void serverAB() {
             t_arrB = tB + generer_inter_arrivee() ;
         }
         else {
-            // Evenement de depart
+            // Evenement de depart B
             deltaB = t_depB - tB;
             t_cumB = t_cumB + sB * deltaB;
             t_occB = t_occB + bB * deltaB;
