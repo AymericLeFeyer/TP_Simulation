@@ -13,7 +13,7 @@ double generer_inter_arrivee(void) {
     double z,x;
     z=(double)rand()/RAND_MAX;
     if(z!=0){
-        x=(double)-(1.0/0.2)*log(z);
+        x=(double)-(1.0/0.3)*log(z);
         return x;
     }
     return generer_inter_arrivee();
@@ -154,14 +154,12 @@ void serverB() {
 }
 
 void serverAB() {
-    double deltaA = 0; // temps d'inter-evenements
-    double deltaB = 0; // temps d'inter-evenements
-    double tA = 0; // temps d'horloge
-    double tB = 0; // temps d'horloge
-    double t_depA = generer_tmps_serviceA() + tA; // pas de depart programmé
-    double t_depB = generer_tmps_serviceB() + tB; // pas de depart programmé
+    double delta = 0; // temps d'inter-evenements
+    double t = 0; // temps d'horloge
+    double t_depA = generer_tmps_serviceA() + t; // pas de depart programmé
+    double t_depB = TEMPS; // pas de depart programmé
     double t_arrA = 0; // arrivée de la pièce suivante à zéro
-    double t_arrB = TEMPS; // arrivée de la pièce suivante à zéro
+    double t_arrB = t_depA; // arrivée de la pièce suivante à zéro
     double t_fin = TEMPS; // duree de la simulation
     double t_bloc = 0;
     int bA = 0; // etat du serveur, busy or not
@@ -171,19 +169,20 @@ void serverAB() {
     int nb = 0; // compteur pour le nombre d'arrivee
     int nbA = 0;
     int nbB = 0;
-    double t_cumA = 0; // temps total de sejour dans le systeme
-    double t_cumB = 0; // temps total de sejour dans le systeme
+    double t_cum = 0; // temps total de sejour dans le systeme
     double t_occA = 0; // temps total d'occupation du serveur
     double t_occB = 0; // temps total d'occupation du serveur
     int nouvellePiece = 0;
-    int maxFileB = 5;
+    int maxFileB = 3;
     int ssA = 0;
     int ssB = 0;
     int ssTotal = 0;
 
-    while (tA < t_fin) {
+    while (t < t_fin) {
         printf("--------\n");
-        printf("Temps A : %lf, Temps B : %lf\n", tA, tB);
+        printf("Temps t : %lf\n", t);
+        printf("Prochaine arrivee A : %lf\n", t_arrA);
+        printf("Prochain depart A : %lf\n", t_depA);
         printf("Prochaine arrivee B : %lf\n", t_arrB);
         printf("Prochain depart B : %lf\n", t_depB);
         printf("Pieces dans B : %d\n", sB);
@@ -192,107 +191,114 @@ void serverAB() {
         ssB += sB;
         ssTotal += (sA + sB);
 
-        
-
         if (sB != maxFileB) {
-                if (t_arrA < t_depA) {
-                    // Evenement d'arrivee A
-                    deltaA = t_arrA - tA;
-                    t_cumA = t_cumA + sA * deltaA;
-                    t_occA = t_occA + bA * deltaA;
-                    nbA++;
-                    nb++;
-                    tA = t_arrA;
-                    sA++;
-                    if (!bA) {
-                        bA = 1;
-                        t_depA = tA + generer_tmps_serviceA();
-                    }
-                    t_arrA = tA + generer_inter_arrivee() ;
+                if ((t_arrA <= t_depA) && (t_arrA <= t_arrB) && (t_arrA <= t_depB)) {
+                    printf("Arrivee dans A ...\n");
+                // Evenement d'arrivee A
+                delta = t_arrA - t;
+                t_cum = t_cum + sA * delta + sB * delta;
+                t_occA = t_occA + bA * delta;
+                nbA++;
+                nb++;
+                t = t_arrA;
+                sA++;
+                if (!bA) {
+                    bA = 1;
+                    t_depA = t + generer_tmps_serviceA();
                 }
+                t_arrA = t + generer_inter_arrivee() ;
             }
+        }
         else {
             printf("Bloqués !\n");
             t_depB = t_arrB;
-            
-            t_bloc += deltaA;
+            t_bloc += delta;
             
 
         }
-        if (t_arrA >= t_depA) {
-          
-            // Evenement de depart A
-            deltaA = t_depA - tA;
-            t_cumA = t_cumA + sA * deltaA;
-            t_occA += bA * deltaA;
-            tA = t_depA;
-            sA--;
-            if (sA > 0) {
-                t_depA = tA + generer_tmps_serviceA();                
+            if ((t_depA <= t_arrA) && (t_depA <= t_arrB) && (t_depA <= t_depB)) {
+                printf("Depart de B ...\n");
+                
+                // Evenement de depart A
+                delta = t_depA - t;
+                t_cum = t_cum + sA * delta + sB * delta;
+                t_occA = t_occA + bA * delta;
+                t = t_depA;
+                sA--;
+                if (sA > 0) {
+                    t_depA = t + generer_tmps_serviceA();                
+                } else {
+                    bA = 0;
+                    t_depA = __INT_MAX__;
+                }
+                t_arrB = t;
+                if (sB < maxFileB) nouvellePiece = 1;
+                
+                
+            }
+            
+
+        if (((t_arrB <= t_depB) && (t_arrB <= t_arrA) && (t_arrB <= t_depA))) {
+            printf("Arrivee dans B ...\n");
+            if ((nouvellePiece)) {
+                // Evenement d'arrivee B
+                nouvellePiece = 0;
+                delta = t_arrB - t;
+                t_cum = t_cum + sA * delta + sB * delta;
+                t_occB = t_occB + bB * delta;
+                nbB++;
+                nb++;
+                t = t_arrB;
+                sB++;
+                if (!bB) {
+                    bB = 1;
+                    t_depB = t + generer_tmps_serviceB();
+                }
+
             } else {
-                bA = 0;
-                t_depA = __INT_MAX__;
-            }
-            t_arrB = tA;
-            if (sB < maxFileB) nouvellePiece = 1;
-            
-            
-        }
-            
-
-        if ((t_arrB < t_depB) && (nouvellePiece)) {
-            // Evenement d'arrivee B
-            nouvellePiece = 0;
-            deltaB = t_arrB - tB;
-            t_cumB = t_cumB + sB * deltaB;
-            t_occB = t_occB + bB * deltaB;
-            nbB++;
-            nb++;
-            tB = t_arrB;
-            sB++;
-            if (!bB) {
-                bB = 1;
-                t_depB = tB + generer_tmps_serviceB();
+                t = t_arrA;
+                t_arrB = t_depA;
+                
             }
             
             
+            
         }
-        else if (t_arrB >= t_depB) {
+        if ((t_depB <= t_arrB) && (t_depB <= t_depA) && (t_depB <= t_arrA)) {
+            printf("Depart de B ...\n");
             // Evenement de depart B
-            deltaB = t_depB - tB;
-            t_cumB += sB * deltaB;
-            t_occB += bB * deltaB;
-            tB = t_depB;
+            delta = t_depB - t;
+            t_cum = t_cum + sA * delta + sB * delta;
+            t_occB = t_occB + bB * delta;
+            t = t_depB;
             sB--;
             if (sB > 0) {
-                t_depB = tB + generer_tmps_serviceB();                
+                t_depB = t + generer_tmps_serviceB();                
             } else {
                 bB = 0;
                 t_depB = __INT_MAX__;
             }
         }
-        else if (t_arrB < t_depB) {
-            t_occB += bB * deltaB;
-        }
     }
-    deltaA = t_fin - tA;
-    deltaB = t_fin - tB;
-    t_cumA = t_cumA + sA * deltaA;
-    t_cumB = t_cumB + sB * deltaB;
-    t_occA = t_occA + bA * deltaA;
-    t_occB = t_occB + bB * deltaB;
+    delta = t_fin - t;
+
+    t_cum = t_cum + sA * delta + sB * delta;
+
+    t_occA = t_occA + bA * delta;
+    t_occB = t_occB + bB * delta;
 
     printf("----------------\n");
 
     printf("Nombre de pièces : %d\n", nbA);
-    printf("Periode de simulation : %lf\n", tA);
-    printf("Nombre moyen de pieces dans l'atelier : %lf\n", ssTotal/tA + ssTotal/tB);
-    printf("Temps moyen passe par une piece dans l'atelier : %lf\n", (t_cumA) / (nbB));
+    printf("Nombre de pièces sorties de B : %d\n", nbB);
+    printf("Periode de simulation : %lf\n", t);
+    printf("Nombre moyen de pieces dans l'atelier : %lf\n", ssTotal/t + ssTotal/t);
+    printf("Temps moyen passe par une piece dans l'atelier : %lf\n", (t_cum) / (t));
     printf("Pourcentage de blocage du serveur A : %.4lf%%\n", 100*(t_bloc/t_fin));
 
     printf("Pourcentage d'utilisation de la machine A : %.2lf%%\n", 100*(t_occA/t_fin));
     printf("Pourcentage d'utilisation de la machine B : %.2lf%%\n", 100*(t_occB/t_fin));
-    printf("Lambda : %lf\n", nbA/tA );
+    printf("Lambda : %lf\n", nbA/t );
 }
 
 int main() {
