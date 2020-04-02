@@ -1,9 +1,14 @@
+// TP2 Simulation - 02/04/2020
+// BAUDELET Conrad
+// LE FEYER Aymeric
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <math.h>
 
 #define TEMPS 5000.0
+#define SEED 31415
 
 double a = 2.0;
 double b = 6.0;
@@ -19,7 +24,7 @@ double generer_inter_arrivee(void) {
     return generer_inter_arrivee();
 }
 
-double generer_tmps_serviceA(void)
+double generer_tmps_serviceB(void)
 {
     double z,x;
     z=(double)rand()/RAND_MAX;
@@ -27,11 +32,11 @@ double generer_tmps_serviceA(void)
         x=(double)-(3.0)*log(z);
         return x;
     }
-    return generer_tmps_serviceA();
+    return generer_tmps_serviceB();
 }
 
 
-double generer_tmps_serviceB(void)
+double generer_tmps_serviceA(void)
 {
    double x,y;
    x = a+(b-a)*(double)rand()/RAND_MAX;
@@ -50,7 +55,7 @@ double generer_tmps_serviceB(void)
            return x;
        }
    }
-   return generer_tmps_serviceB();
+   return generer_tmps_serviceA();
 }
 
 void serverA() {
@@ -154,6 +159,7 @@ void serverB() {
 }
 
 void serverAB() {
+    srand(SEED);
     double deltaA = 0; // temps d'inter-evenements
     double deltaB = 0; // temps d'inter-evenements
     double tA = 0; // temps d'horloge
@@ -177,47 +183,54 @@ void serverAB() {
     double t_occB = 0; // temps total d'occupation du serveur
     int nouvellePiece = 0;
     int maxFileB = 5;
+    int maxFileA = 99999;
+    
     int ssA = 0;
     int ssB = 0;
     int ssTotal = 0;
 
     while (tA < t_fin) {
-        printf("--------\n");
-        printf("Temps A : %lf, Temps B : %lf\n", tA, tB);
-        printf("Prochaine arrivee B : %lf\n", t_arrB);
-        printf("Prochain depart B : %lf\n", t_depB);
-        printf("Pieces dans B : %d\n", sB);
+        // printf("--------\n");
+        // printf("Temps A : %lf, Temps B : %lf\n", tA, tB);
+        // printf("Prochaine arrivee B : %lf\n", t_arrB);
+        // printf("Prochain depart B : %lf\n", t_depB);
+        // printf("Pieces dans B : %d\n", sA);
 
         ssA += sA;
         ssB += sB;
         ssTotal += (sA + sB);
 
         
-
-        if (sB != maxFileB) {
-                if (t_arrA < t_depA) {
-                    // Evenement d'arrivee A
-                    deltaA = t_arrA - tA;
-                    t_cumA = t_cumA + sA * deltaA;
-                    t_occA = t_occA + bA * deltaA;
-                    nbA++;
-                    nb++;
-                    tA = t_arrA;
-                    sA++;
-                    if (!bA) {
-                        bA = 1;
-                        t_depA = tA + generer_tmps_serviceA();
+        if (sA != maxFileA) {
+            if (sB != maxFileB) {
+                    if (t_arrA < t_depA) {
+                        // Evenement d'arrivee A
+                        deltaA = t_arrA - tA;
+                        t_cumA = t_cumA + sA * deltaA;
+                        t_occA = t_occA + bA * deltaA;
+                        nbA++;
+                        nb++;
+                        tA = t_arrA;
+                        sA++;
+                        if (!bA) {
+                            bA = 1;
+                            t_depA = tA + generer_tmps_serviceA();
+                        }
+                        t_arrA = tA + generer_inter_arrivee() ;
                     }
-                    t_arrA = tA + generer_inter_arrivee() ;
                 }
-            }
-        else {
-            printf("Bloqués !\n");
-            t_depB = t_arrB;
-            
-            t_bloc += deltaA;
-            
+            else {
+                printf("Bloqués B !\n");
+                t_depB = t_arrB;
+                
+                t_bloc += deltaA;
+                
 
+            }
+        }
+        else {
+            printf("Bloqués A !\n");
+            t_depA = t_arrA;
         }
         if (t_arrA >= t_depA) {
           
@@ -239,7 +252,7 @@ void serverAB() {
             
         }
             
-
+    
         if ((t_arrB < t_depB) && (nouvellePiece)) {
             // Evenement d'arrivee B
             nouvellePiece = 0;
@@ -274,6 +287,7 @@ void serverAB() {
         else if (t_arrB < t_depB) {
             t_occB += bB * deltaB;
         }
+        printf("%d\n", sB);
     }
     deltaA = t_fin - tA;
     deltaB = t_fin - tB;
@@ -293,6 +307,8 @@ void serverAB() {
     printf("Pourcentage d'utilisation de la machine A : %.2lf%%\n", 100*(t_occA/t_fin));
     printf("Pourcentage d'utilisation de la machine B : %.2lf%%\n", 100*(t_occB/t_fin));
     printf("Lambda : %lf\n", nbA/tA );
+    // printf("----------------\n");
+    // printf("%d\n%lf\n%lf\n%.2lf%%\n%.2lf%%\n%.2lf%%\n%lf", nbA, ssTotal/tA + ssTotal/tB, (t_cumA) / (nbB), 100*(t_bloc/t_fin), 100*(t_occA/t_fin), 100*(t_occB/t_fin), nbA/tA);
 }
 
 int main() {
